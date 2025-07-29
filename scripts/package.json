@@ -1,0 +1,19 @@
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "upload-metadata": "tsx upload_metadata.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.9",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@irys/sdk": "^0.1.0",
+    "@metaplex-foundation/umi": "^1.2.0",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
+    "dotenv": "^17.2.1"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "solana-fungible-token-creator-dashboard",
+  "version": "1.0.0",
+  "description": "A full-stack Solana DApp for creating and managing fungible SPL tokens",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean",
+    "anchor:build": "cd programs/token_factory && anchor build",
+    "anchor:test": "cd programs/token_factory && anchor test",
+    "upload-metadata": "pnpm --filter scripts upload-metadata"
+  },
+  "keywords": ["solana", "spl-token", "web3", "dapp"],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.7.1",
+  "devDependencies": {
+    "turbo": "^2.5.5"
+  }
+}
