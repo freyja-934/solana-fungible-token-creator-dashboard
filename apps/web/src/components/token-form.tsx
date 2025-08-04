@@ -23,15 +23,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { TokenFormData, tokenFormSchema } from '@/lib/schemas';
 import { createSplToken } from '@/lib/solana/token';
 import { useUmi } from '@/lib/solana/umi-provider';
+import { uploadToIPFS } from '@/lib/solana/upload';
+import { supabase } from '@/lib/supabase/client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useMutation } from '@tanstack/react-query';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 export function TokenForm() {
-  const { connected } = useWallet();
+  const { connected, publicKey } = useWallet();
   const umi = useUmi();
   const [isOpen, setIsOpen] = useState(false);
   const [txState, setTxState] = useState<TransactionState>('idle');
@@ -49,7 +52,7 @@ export function TokenForm() {
       freezeAuthority: false,
       mintAuthority: false,
       description: '',
-      imageUrl: '',
+      imageFile: undefined,
     },
   });
 
@@ -59,9 +62,56 @@ export function TokenForm() {
       setTxMessage('Creating your token...');
       
       try {
-        const result = await createSplToken(umi, data);
+        let metadataUri: string | undefined;
+        
+        // Upload image if provided
+        if (data.imageFile) {
+          setTxMessage('Uploading image to IPFS...');
+          
+          const metadata = {
+            name: data.name,
+            symbol: data.symbol,
+            description: data.description || '',
+          };
+          
+          const { metadataUri: uploadedUri } = await uploadToIPFS(
+            data.imageFile,
+            metadata
+          );
+          
+          metadataUri = uploadedUri;
+        }
+        
+        setTxMessage('Creating token on Solana...');
+        const result = await createSplToken(umi, data, metadataUri);
         setCreatedMint(result.mint);
         setTxSignature(result.transactionSignature);
+        
+        // Save to Supabase
+        try {
+          setTxMessage('Saving token information...');
+          const { error } = await supabase.from('tokens').insert({
+            creator: publicKey?.toBase58() || '',
+            name: data.name,
+            symbol: data.symbol,
+            description: data.description,
+            image_url: data.imageFile ? metadataUri : undefined,
+            metadata_uri: metadataUri,
+            mint_address: result.mint,
+            fee_enabled: false, // TODO: Add fee configuration
+            initial_supply: (BigInt(parseFloat(data.initialSupply) * Math.pow(10, data.decimals))).toString(),
+            decimals: data.decimals,
+          });
+          
+          if (error) {
+            console.error('Error saving to Supabase:', error);
+            // Don't throw - token was created successfully
+          }
+        } catch (dbError) {
+          console.error('Database error:', dbError);
+          // Don't throw - token was created successfully
+        }
+        
         setTxState('success');
         setTxMessage(`Token created successfully! Mint address: ${result.mint}`);
         form.reset();
@@ -185,19 +235,36 @@ export function TokenForm() {
 
             <FormField
               control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
+              name="imageFile"
+              render={({ field: { value, onChange, ...field } }) => (
                 <FormItem>
-                  <FormLabel>Image URL (Optional)</FormLabel>
+                  <FormLabel>Token Logo (Optional)</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="url"
-                      placeholder="https://example.com/token-logo.png"
-                      {...field}
-                    />
+                    <div className="space-y-2">
+                      <Input 
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          onChange(file);
+                        }}
+                        {...field}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:transition-colors file:duration-200 dark:file:bg-primary/20 dark:file:text-primary cursor-pointer"
+                      />
+                      {value && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-2 text-sm text-muted-foreground"
+                        >
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>Selected: {value.name} ({(value.size / 1024).toFixed(1)} KB)</span>
+                        </motion.div>
+                      )}
+                    </div>
                   </FormControl>
                   <FormDescription>
-                    URL to your token's logo image
+                    Upload your token's logo image (max 5MB, .jpg, .png, .webp, .gif)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -271,18 +338,26 @@ export function TokenForm() {
               txSignature={txSignature}
             />
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={!connected || createTokenMutation.isPending}
+            <Button 
+              type="submit" 
+              className="w-full relative overflow-hidden" 
+              disabled={createTokenMutation.isPending}
             >
               {createTokenMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating Token...
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '100%' }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 1.5,
+                      ease: 'linear'
+                    }}
+                  />
                 </>
-              ) : !connected ? (
-                'Connect Wallet to Create Token'
               ) : (
                 'Create Token'
               )}

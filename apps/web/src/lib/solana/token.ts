@@ -5,6 +5,7 @@ import {
     TokenStandard
 } from '@metaplex-foundation/mpl-token-metadata';
 import { generateSigner, percentAmount, Umi } from '@metaplex-foundation/umi';
+import { base58 } from '@metaplex-foundation/umi/serializers';
 
 export interface CreateTokenResult {
   mint: string;
@@ -47,9 +48,12 @@ export async function createSplToken(
 
   const result = await builder.sendAndConfirm(umi);
 
+  // Convert the signature from Uint8Array to base58 string
+  const signatureString = base58.deserialize(result.signature)[0];
+
   return {
     mint: mint.publicKey.toString(),
-    transactionSignature: result.signature.toString(),
+    transactionSignature: signatureString,
     metadataUri,
   };
 }
@@ -57,7 +61,7 @@ export async function createSplToken(
 export function formatTokenAmount(amount: string, decimals: number): string {
   const value = parseFloat(amount);
   if (isNaN(value)) return '0';
-  
+
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,

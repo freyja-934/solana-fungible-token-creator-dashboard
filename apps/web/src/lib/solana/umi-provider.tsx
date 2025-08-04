@@ -5,31 +5,29 @@ import type { Umi } from '@metaplex-foundation/umi';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-adapters';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 
-const UmiContext = createContext<Umi | undefined>(undefined);
+const UmiContext = createContext<Umi | null>(null);
 
 export function UmiProvider({ children }: { children: React.ReactNode }) {
   const { connection } = useConnection();
   const wallet = useWallet();
 
   const umi = useMemo(() => {
-    const umi = createUmi(connection.rpcEndpoint).use(mplTokenMetadata());
-
-    if (wallet.publicKey) {
-      umi.use(walletAdapterIdentity(wallet));
-    }
-
+    const umi = createUmi(connection.rpcEndpoint)
+      .use(walletAdapterIdentity(wallet))
+      .use(mplTokenMetadata());
+    
     return umi;
-  }, [connection.rpcEndpoint, wallet]);
+  }, [connection, wallet]);
 
   return <UmiContext.Provider value={umi}>{children}</UmiContext.Provider>;
 }
 
 export function useUmi() {
-  const umi = useContext(UmiContext);
-  if (!umi) {
-    throw new Error('useUmi must be used within UmiProvider');
+  const context = useContext(UmiContext);
+  if (!context) {
+    throw new Error('useUmi must be used within a UmiProvider');
   }
-  return umi;
+  return context;
 } 

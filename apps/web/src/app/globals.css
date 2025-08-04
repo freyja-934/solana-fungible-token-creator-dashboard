@@ -1,5 +1,6 @@
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root {
@@ -22,37 +23,212 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --radius: 1rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* Style guide colors */
+    --background: 253 44% 8%; /* #0e0b1f */
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 248 38% 12%; /* #15132b */
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 248 38% 12%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 270 66% 56%; /* #8b5cf6 */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 246 34% 16%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 246 34% 16%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 270 66% 56%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62% 30%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 248 38% 20%;
+    --input: 248 38% 20%;
+    --ring: 270 66% 56%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  /* Glassmorphic card effect */
+  .glass {
+    @apply bg-white/[0.02] backdrop-blur-md border border-white/[0.1];
+  }
+  
+  .glass-hover {
+    @apply hover:bg-white/[0.04] hover:border-white/[0.2] transition-all duration-200;
+  }
+  
+  /* Glow effects */
+  .glow {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3),
+                0 0 40px rgba(139, 92, 246, 0.1);
+  }
+  
+  .glow-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .glow-hover:hover {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.4),
+                0 0 60px rgba(139, 92, 246, 0.2);
+  }
+  
+  /* Button press effect */
+  .press-effect {
+    @apply active:scale-[0.98] transition-transform duration-100;
+  }
+  
+  /* Gradient background */
+  .gradient-bg {
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(220 41% 7%) 50%, 
+      hsl(var(--background)) 100%);
+  }
+  
+  /* Animated gradient */
+  .animated-gradient {
+    background-size: 400% 400%;
+    animation: gradient-shift 15s ease infinite;
+  }
+  
+  .animate-gradient-shift {
+    background-size: 400% 400%;
+    animation: gradient-shift 15s ease infinite;
+  }
+  
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  /* Shimmer effect */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 60%
+    );
+    animation: shimmer-slide 2s infinite;
+  }
+  
+  @keyframes shimmer-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  /* Focus ring */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-background;
+  }
+  
+  /* Style guide hover effects */
+  .glow-hover {
+    transition: all 0.3s ease;
+  }
+  
+  .glow-hover:hover {
+    box-shadow: 0 0 0 1px #8b5cf6;
+    transform: scale(1.02);
+  }
+  
+  /* Border shimmer effect */
+  .border-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .border-shimmer::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(45deg, #8b5cf6, #ec4899, #8b5cf6);
+    background-size: 200% 200%;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: borderShimmer 3s ease infinite;
+    z-index: -1;
+  }
+  
+  .border-shimmer:hover::before {
+    opacity: 1;
+  }
+  
+  .border-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    background: hsl(var(--card));
+    border-radius: inherit;
+    z-index: -1;
+  }
+  
+  /* Pulse glow animation */
+  .pulse-glow {
+    animation: pulse-glow 2s infinite;
+  }
+  
+  /* Float up animation */
+  .float-up {
+    animation: floatUp 0.6s ease-out;
+  }
+  
+  @keyframes borderShimmer {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+  
+  @keyframes floatUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.8);
+    }
   }
 }
