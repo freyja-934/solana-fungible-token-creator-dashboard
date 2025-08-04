@@ -8,15 +8,15 @@ export type TransactionState = 'idle' | 'loading' | 'success' | 'error';
 interface TransactionStatusProps {
   state: TransactionState;
   message?: string;
-  txSignature?: string;
-  onClose?: () => void;
+  transactionSignature?: string;
+  mintAddress?: string;
 }
 
 export function TransactionStatus({
   state,
   message,
-  txSignature,
-  onClose,
+  transactionSignature,
+  mintAddress,
 }: TransactionStatusProps) {
   if (state === 'idle') return null;
 
@@ -40,15 +40,25 @@ export function TransactionStatus({
           <AlertTitle>Success!</AlertTitle>
           <AlertDescription className="space-y-2">
             <p>{message || 'Transaction completed successfully.'}</p>
-            {txSignature && (
+            {transactionSignature && (
               <p className="text-sm">
                 <a
-                  href={`https://explorer.solana.com/tx/${txSignature}?cluster=${network}`}
+                  href={`https://explorer.solana.com/tx/${transactionSignature}?cluster=${network}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline hover:no-underline"
+                  className="text-primary hover:underline"
                 >
-                  View on Solana Explorer
+                  View on Solana Explorer →
+                </a>
+              </p>
+            )}
+            {mintAddress && (
+              <p className="text-sm">
+                <a
+                  href={`/token/${mintAddress}`}
+                  className="text-primary hover:underline"
+                >
+                  View Token Details →
                 </a>
               </p>
             )}

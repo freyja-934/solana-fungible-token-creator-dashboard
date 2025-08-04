@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Coins, LayoutGrid, Plus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { ThemeToggle } from './theme-toggle';
 
 interface SidebarItem {
@@ -14,7 +15,7 @@ interface SidebarItem {
   isActive?: boolean;
 }
 
-export function TokensSidebar() {
+function TokensSidebarContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
@@ -125,5 +126,24 @@ export function TokensSidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+export function TokensSidebar() {
+  return (
+    <Suspense fallback={
+      <aside className="w-64 min-h-screen bg-card/50 backdrop-blur-md border-r border-white/10 p-6 flex flex-col animate-pulse">
+        <div className="h-8 w-32 bg-white/10 rounded mb-8" />
+        <div className="space-y-4">
+          <div className="h-4 w-24 bg-white/10 rounded" />
+          <div className="space-y-2">
+            <div className="h-10 bg-white/10 rounded-lg" />
+            <div className="h-10 bg-white/10 rounded-lg" />
+          </div>
+        </div>
+      </aside>
+    }>
+      <TokensSidebarContent />
+    </Suspense>
   );
 } 

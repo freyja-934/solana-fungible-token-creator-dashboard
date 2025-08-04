@@ -1,7 +1,15 @@
 
+interface UploadMetadata {
+  name: string;
+  symbol: string;
+  description: string;
+  image?: string;
+  [key: string]: unknown;
+}
+
 export async function uploadToIPFS(
   file: File,
-  metadata?: any
+  metadata?: UploadMetadata
 ): Promise<{ imageUri: string; metadataUri: string }> {
   try {
     const formData = new FormData();

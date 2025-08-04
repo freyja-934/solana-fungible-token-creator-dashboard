@@ -34,7 +34,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 export function TokenForm() {
-  const { connected, publicKey } = useWallet();
+  const { publicKey } = useWallet();
   const umi = useUmi();
   const [isOpen, setIsOpen] = useState(false);
   const [txState, setTxState] = useState<TransactionState>('idle');
@@ -138,7 +138,7 @@ export function TokenForm() {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -264,7 +264,7 @@ export function TokenForm() {
                     </div>
                   </FormControl>
                   <FormDescription>
-                    Upload your token's logo image (max 5MB, .jpg, .png, .webp, .gif)
+                    Upload your token&apos;s logo image (max 5MB, .jpg, .png, .webp, .gif)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -332,11 +332,14 @@ export function TokenForm() {
               </CollapsibleContent>
             </Collapsible>
 
-            <TransactionStatus
-              state={txState}
-              message={txMessage}
-              txSignature={txSignature}
-            />
+            {txState !== 'idle' && (
+              <TransactionStatus
+                state={txState}
+                message={txMessage}
+                transactionSignature={txSignature}
+                mintAddress={createdMint}
+              />
+            )}
 
             <Button 
               type="submit" 

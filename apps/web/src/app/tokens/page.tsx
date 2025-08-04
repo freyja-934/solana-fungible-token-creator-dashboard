@@ -25,7 +25,7 @@ import {
     Search
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 
 // Types
 interface TokenWithMetadata extends Token {
@@ -36,7 +36,7 @@ interface TokenWithMetadata extends Token {
   };
 }
 
-export default function TokensPage() {
+function TokensPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { publicKey } = useWallet();
@@ -172,7 +172,7 @@ export default function TokensPage() {
           </div>
 
           {/* Filters */}
-          <Select value={feeFilter} onValueChange={(value: any) => setFeeFilter(value)}>
+          <Select value={feeFilter} onValueChange={(value: 'all' | 'yes' | 'no') => setFeeFilter(value)}>
             <SelectTrigger className="w-[140px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Fee Filter" />
@@ -278,6 +278,7 @@ export default function TokensPage() {
                                 src={token.metadata.image}
                                 alt={token.name}
                                 className="h-10 w-10 rounded-full object-cover"
+                                loading="lazy"
                               />
                             ) : (
                               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-lg">
@@ -386,5 +387,19 @@ export default function TokensPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TokensPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 p-8">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    }>
+      <TokensPageContent />
+    </Suspense>
   );
 } 

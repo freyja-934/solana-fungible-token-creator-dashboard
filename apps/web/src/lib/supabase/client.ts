@@ -2,7 +2,7 @@ import { config } from '@/lib/config';
 import { createClient } from '@supabase/supabase-js';
 
 // Configure BigInt serialization
-(BigInt.prototype as any).toJSON = function() {
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function() {
   return this.toString();
 };
 

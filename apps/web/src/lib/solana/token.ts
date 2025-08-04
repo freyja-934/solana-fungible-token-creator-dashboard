@@ -43,7 +43,7 @@ export async function createSplToken(
     tokenStandard: TokenStandard.Fungible,
   });
 
-  let builder = createTokenInstruction
+  const builder = createTokenInstruction
     .append(mintTokenInstruction);
 
   const result = await builder.sendAndConfirm(umi);

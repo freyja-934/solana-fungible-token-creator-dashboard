@@ -77,13 +77,13 @@ export default function HomePage() {
       
       <main className="relative z-10 pt-16">
         {/* Hero Section */}
-        <section className="relative overflow-hidden px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-          <div className="mx-auto max-w-7xl">
+        <section className="relative min-h-screen flex items-center justify-center px-4">
+          <div className="container mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-center"
+              transition={{ duration: 0.6 }}
+              className="mx-auto max-w-4xl space-y-8"
             >
               <ShimmerBorder className="inline-block">
                 <div className="px-6 py-2 text-sm font-medium text-primary">
@@ -141,16 +141,16 @@ export default function HomePage() {
                 )}
               </div>
             </motion.div>
-            
-            {/* Floating token icons */}
+
+            {/* Floating Token Icons */}
             <div className="absolute inset-0 -z-10 overflow-hidden">
               {[...Array(6)].map((_, i) => (
                 <motion.div
                   key={i}
                   className="absolute h-12 w-12 text-primary/20"
-                  style={{
-                    left: `${(i * 16) + 10}%`,
-                    top: `${(i * 15) + 10}%`,
+                  initial={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
                   }}
                   animate={{
                     y: [0, -30, 0],
@@ -159,7 +159,7 @@ export default function HomePage() {
                   transition={{
                     duration: 10 + i * 2,
                     repeat: Infinity,
-                    ease: 'linear',
+                    ease: "linear",
                   }}
                 >
                   <Coins className="h-full w-full" />
@@ -170,7 +170,7 @@ export default function HomePage() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="py-24 px-4">
+        <section id="features" className="border-t border-white/10 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <div className="container mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}

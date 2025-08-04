@@ -18,8 +18,8 @@ export interface HeliusTokenMetadata {
     verified: boolean;
     key: string;
   };
-  uses?: any;
-  programmableConfig?: any;
+  uses?: unknown;
+  programmableConfig?: unknown;
 }
 
 export interface HeliusAsset {
@@ -51,10 +51,10 @@ export interface HeliusAsset {
     eligible: boolean;
     compressed: boolean;
   };
-  grouping: any[];
+  grouping: unknown[];
   royalty: {
     royalty_model: string;
-    target: any;
+    target: unknown;
     percent: number;
     basis_points: number;
     primary_sale_happened: boolean;
@@ -68,14 +68,14 @@ export interface HeliusAsset {
   ownership: {
     frozen: boolean;
     delegated: boolean;
-    delegate: any;
+    delegate: unknown;
     ownership_model: string;
     owner: string;
   };
   supply: {
     print_max_supply: number;
     print_current_supply: number;
-    edition_nonce: any;
+    edition_nonce: unknown;
   };
   mutable: boolean;
   burnt: boolean;
