@@ -9,9 +9,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { config } from '@/lib/config';
-import { heliusClient } from '@/lib/helius/client';
 import { supabase, Token } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -26,15 +25,6 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
-
-// Types
-interface TokenWithMetadata extends Token {
-  metadata?: {
-    name?: string;
-    symbol?: string;
-    image?: string;
-  };
-}
 
 function TokensPageContent() {
   const router = useRouter();
@@ -56,7 +46,7 @@ function TokensPageContent() {
     isFetchingNextPage,
     isLoading,
     error,
-  } = useInfiniteQuery<TokenWithMetadata[]>({
+  } = useInfiniteQuery<Token[]>({
     queryKey: ['tokens', filter, publicKey, feeFilter, sortBy, sortOrder, searchQuery],
     queryFn: async ({ pageParam = 0 }) => {
       const pageNumber = pageParam as number;
@@ -86,22 +76,9 @@ function TokensPageContent() {
       
       if (error) throw error;
       
-      // Fetch metadata from Helius for each token
-      const tokensWithMetadata = await Promise.all(
-        (data || []).map(async (token) => {
-          try {
-            const asset = await heliusClient.getAsset(token.mint_address);
-            return {
-              ...token,
-              metadata: asset?.content?.metadata,
-            };
-          } catch {
-            return token;
-          }
-        })
-      );
-
-      return tokensWithMetadata;
+      // Return tokens directly without fetching from Helius
+      // The image_url is already in our database
+      return data || [];
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => {
@@ -273,18 +250,25 @@ function TokensPageContent() {
                         {/* Token */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
-                            {token.metadata?.image ? (
+                            {token.image_url ? (
                               <img
-                                src={token.metadata.image}
+                                src={token.image_url}
                                 alt={token.name}
                                 className="h-10 w-10 rounded-full object-cover"
                                 loading="lazy"
+                                onError={(e) => {
+                                  // Fallback to first letter if image fails to load
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
                               />
-                            ) : (
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-lg">
-                                {token.symbol.charAt(0)}
-                              </div>
-                            )}
+                            ) : null}
+                            <div className={cn(
+                              "h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-lg",
+                              token.image_url ? "hidden" : ""
+                            )}>
+                              {token.symbol.charAt(0)}
+                            </div>
                             <div>
                               <div className="text-sm font-medium">{token.name}</div>
                               <div className="text-xs text-muted-foreground">{token.symbol}</div>
@@ -357,7 +341,7 @@ function TokensPageContent() {
                             <ActionButton
                               size="sm"
                               variant="ghost"
-                              onClick={() => window.open(config.explorer.getAddressUrl(token.mint_address), '_blank')}
+                              onClick={() => window.open(`https://explorer.solana.com/address/${token.mint_address}`, '_blank')}
                             >
                               <ExternalLink className="h-4 w-4" />
                             </ActionButton>

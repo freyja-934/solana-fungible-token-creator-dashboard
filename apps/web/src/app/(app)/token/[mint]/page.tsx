@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { GlowCard } from '@/components/ui/glow-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatsCard } from '@/components/ui/stats-card';
+import { supabase } from '@/lib/supabase/client';
 import { getMint } from '@solana/spl-token';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
@@ -25,6 +26,8 @@ interface TokenData {
   name?: string;
   symbol?: string;
   logo?: string;
+  description?: string;
+  metadataUri?: string;
 }
 
 // Mock data for demonstration - same as dashboard
@@ -79,18 +82,67 @@ export default function TokenDetailsPage() {
         return;
       }
 
-      // Try to fetch from blockchain
       try {
+        // First try to fetch from Supabase
+        const { data: dbToken, error: dbError } = await supabase
+          .from('tokens')
+          .select('*')
+          .eq('mint_address', mintAddress)
+          .single();
+
+        let tokenInfo: TokenData = {
+          address: mintAddress,
+          decimals: 0,
+          supply: '0',
+        };
+
+        // If found in database, use that data
+        if (dbToken && !dbError) {
+          tokenInfo = {
+            ...tokenInfo,
+            name: dbToken.name,
+            symbol: dbToken.symbol,
+            logo: dbToken.image_url,
+            description: dbToken.description,
+            decimals: dbToken.decimals,
+            supply: (BigInt(dbToken.initial_supply) / BigInt(10 ** dbToken.decimals)).toString(),
+            metadataUri: dbToken.metadata_uri,
+          };
+        }
+
+        // Fetch on-chain data
         const mintPubkey = new PublicKey(mintAddress);
         const mintInfo = await getMint(connection, mintPubkey);
 
-        setTokenData({
-          address: mintAddress,
+        // Merge with on-chain data
+        tokenInfo = {
+          ...tokenInfo,
           decimals: mintInfo.decimals,
           supply: (mintInfo.supply / BigInt(10 ** mintInfo.decimals)).toString(),
           mintAuthority: mintInfo.mintAuthority?.toBase58(),
           freezeAuthority: mintInfo.freezeAuthority?.toBase58(),
-        });
+        };
+
+        // If we don't have name/symbol from DB, try to fetch from metadata URI
+        if (!tokenInfo.name && tokenInfo.metadataUri) {
+          try {
+            const metadataResponse = await fetch(tokenInfo.metadataUri);
+            if (metadataResponse.ok) {
+              const metadata = await metadataResponse.json();
+              tokenInfo = {
+                ...tokenInfo,
+                name: metadata.name || tokenInfo.name,
+                symbol: metadata.symbol || tokenInfo.symbol,
+                logo: metadata.image || tokenInfo.logo,
+                description: metadata.description || tokenInfo.description,
+              };
+            }
+          } catch (metadataError) {
+            console.error('Error fetching metadata:', metadataError);
+          }
+        }
+
+        setTokenData(tokenInfo);
         setIsMockData(false);
       } catch (err) {
         console.error('Error fetching token data:', err);
@@ -216,16 +268,41 @@ export default function TokenDetailsPage() {
         {/* Token Header */}
         <GlowCard className="p-8">
           <div className="flex items-center gap-6">
-            {tokenData?.logo && (
-              <div className="text-6xl">{tokenData.logo}</div>
-            )}
+            {tokenData?.logo ? (
+              tokenData.logo.startsWith('http') || tokenData.logo.startsWith('data:') ? (
+                <img
+                  src={tokenData.logo}
+                  alt={tokenData.name || 'Token'}
+                  className="w-16 h-16 rounded-full object-cover"
+                  onError={(e) => {
+                    // Fallback to first letter if image fails
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+              ) : (
+                <div className="text-6xl">{tokenData.logo}</div>
+              )
+            ) : null}
+            <div 
+              className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold"
+              style={{ display: tokenData?.logo ? 'none' : 'flex' }}
+            >
+              {tokenData?.symbol?.charAt(0) || '?'}
+            </div>
             <div className="flex-1">
               <h2 className="text-3xl font-bold mb-2">
                 {tokenData?.name || 'Unknown Token'}
               </h2>
-              <p className="text-xl text-muted-foreground mb-4">
+              <p className="text-xl text-muted-foreground mb-2">
                 {tokenData?.symbol || 'N/A'}
               </p>
+              {tokenData?.description && (
+                <p className="text-sm text-muted-foreground">
+                  {tokenData.description}
+                </p>
+              )}
               <div className="flex items-center gap-2">
                 <code className="text-sm bg-white/5 px-3 py-1 rounded-lg">
                   {mintAddress}

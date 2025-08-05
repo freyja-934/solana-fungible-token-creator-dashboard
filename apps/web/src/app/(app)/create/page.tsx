@@ -25,7 +25,7 @@ export default function CreateTokenPage() {
   }
 
   return (
-    <PageContainer className="min-h-screen">
+    <PageContainer>
       <PageHeader
         title="Create Token"
         description="Launch your SPL token on Solana"
@@ -48,7 +48,7 @@ export default function CreateTokenPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="max-w-4xl mx-auto"
+        className="flex justify-center"
       >
         <TokenForm />
       </motion.div>

@@ -18,44 +18,63 @@ export async function createSplToken(
   formData: TokenFormData,
   metadataUri?: string
 ): Promise<CreateTokenResult> {
-  const mint = generateSigner(umi);
+  try {
+    // Ensure wallet is connected
+    if (!umi.identity) {
+      throw new Error('Wallet not connected');
+    }
 
-  const createTokenInstruction = createFungible(umi, {
-    mint,
-    name: formData.name,
-    symbol: formData.symbol,
-    uri: metadataUri || '',
-    sellerFeeBasisPoints: percentAmount(0),
-    decimals: formData.decimals,
-    printSupply: null,
-    isMutable: formData.mintAuthority || formData.freezeAuthority,
-  });
+    const mint = generateSigner(umi);
 
-  const initialSupply = BigInt(
-    parseFloat(formData.initialSupply) * Math.pow(10, formData.decimals)
-  );
+    // Determine if token should be mutable based on authorities
+    const isMutable = formData.mintAuthority !== 'none' || formData.freezeAuthority;
 
-  const mintTokenInstruction = mintV1(umi, {
-    mint: mint.publicKey,
-    authority: umi.identity,
-    amount: initialSupply,
-    tokenOwner: umi.identity.publicKey,
-    tokenStandard: TokenStandard.Fungible,
-  });
+    const createTokenInstruction = createFungible(umi, {
+      mint,
+      name: formData.name,
+      symbol: formData.symbol,
+      uri: metadataUri || '',
+      sellerFeeBasisPoints: percentAmount(0),
+      decimals: formData.decimals,
+      printSupply: null,
+      isMutable,
+    });
 
-  const builder = createTokenInstruction
-    .append(mintTokenInstruction);
+    const initialSupply = BigInt(
+      parseFloat(formData.initialSupply) * Math.pow(10, formData.decimals)
+    );
 
-  const result = await builder.sendAndConfirm(umi);
+    const mintTokenInstruction = mintV1(umi, {
+      mint: mint.publicKey,
+      authority: umi.identity,
+      amount: initialSupply,
+      tokenOwner: umi.identity.publicKey,
+      tokenStandard: TokenStandard.Fungible,
+    });
 
-  // Convert the signature from Uint8Array to base58 string
-  const signatureString = base58.deserialize(result.signature)[0];
+    // Build transaction
+    const builder = createTokenInstruction.append(mintTokenInstruction);
 
-  return {
-    mint: mint.publicKey.toString(),
-    transactionSignature: signatureString,
-    metadataUri,
-  };
+    // Send and confirm with error handling
+    let result;
+    try {
+      result = await builder.sendAndConfirm(umi, {
+        confirm: { commitment: 'confirmed' },
+      });
+    } catch (sendError: unknown) {
+      console.error('Transaction send error:', sendError);
+      const errorMessage = sendError instanceof Error ? sendError.message : 'Unknown error';
+      throw new Error(`Failed to send transaction: ${errorMessage}`);
+    }
+
+    return {
+      mint: mint.publicKey,
+      transactionSignature: base58.deserialize(result.signature)[0],
+    };
+  } catch (error: unknown) {
+    console.error('Token creation error:', error);
+    throw error;
+  }
 }
 
 export function formatTokenAmount(amount: string, decimals: number): string {

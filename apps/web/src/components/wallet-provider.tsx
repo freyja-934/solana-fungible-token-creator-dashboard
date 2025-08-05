@@ -28,7 +28,13 @@ export default function WalletConnectionProvider({
   );
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider 
+      endpoint={endpoint}
+      config={{
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: 60000,
+      }}
+    >
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>

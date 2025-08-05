@@ -18,6 +18,13 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { TokenFormData, tokenFormSchema } from '@/lib/schemas';
@@ -30,7 +37,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 export function TokenForm() {
@@ -41,6 +48,7 @@ export function TokenForm() {
   const [txMessage, setTxMessage] = useState<string>('');
   const [txSignature, setTxSignature] = useState<string>('');
   const [createdMint, setCreatedMint] = useState<string>('');
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   const form = useForm<TokenFormData>({
     resolver: zodResolver(tokenFormSchema),
@@ -49,12 +57,29 @@ export function TokenForm() {
       symbol: '',
       decimals: 9,
       initialSupply: '',
+      mintAuthority: 'self',
       freezeAuthority: false,
-      mintAuthority: false,
       description: '',
       imageFile: undefined,
     },
   });
+
+  const imageFile = form.watch('imageFile');
+
+  // Handle image preview URL
+  useEffect(() => {
+    if (imageFile) {
+      const url = URL.createObjectURL(imageFile);
+      setImagePreviewUrl(url);
+      
+      // Cleanup function to revoke the object URL
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setImagePreviewUrl(null);
+    }
+  }, [imageFile]);
 
   const createTokenMutation = useMutation({
     mutationFn: async (data: TokenFormData) => {
@@ -62,7 +87,13 @@ export function TokenForm() {
       setTxMessage('Creating your token...');
       
       try {
+        // Validate wallet connection
+        if (!publicKey) {
+          throw new Error('Please connect your wallet first');
+        }
+
         let metadataUri: string | undefined;
+        let imageUri: string | undefined;
         
         // Upload image if provided
         if (data.imageFile) {
@@ -74,15 +105,16 @@ export function TokenForm() {
             description: data.description || '',
           };
           
-          const { metadataUri: uploadedUri } = await uploadToIPFS(
+          const { metadataUri: uploadedUri, imageUri: uploadedImageUri } = await uploadToIPFS(
             data.imageFile,
             metadata
           );
           
           metadataUri = uploadedUri;
+          imageUri = uploadedImageUri;
         }
         
-        setTxMessage('Creating token on Solana...');
+        setTxMessage('Creating token on Solana mainnet...');
         const result = await createSplToken(umi, data, metadataUri);
         setCreatedMint(result.mint);
         setTxSignature(result.transactionSignature);
@@ -95,7 +127,7 @@ export function TokenForm() {
             name: data.name,
             symbol: data.symbol,
             description: data.description,
-            image_url: data.imageFile ? metadataUri : undefined,
+            image_url: imageUri,
             metadata_uri: metadataUri,
             mint_address: result.mint,
             fee_enabled: false, // TODO: Add fee configuration
@@ -118,7 +150,26 @@ export function TokenForm() {
         return result;
       } catch (error) {
         setTxState('error');
-        setTxMessage(error instanceof Error ? error.message : 'Failed to create token');
+        
+        // Extract meaningful error message
+        let errorMessage = 'Failed to create token';
+        
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          
+          // Check for common errors
+          if (error.message.includes('insufficient')) {
+            errorMessage = 'Insufficient SOL balance. Please ensure you have enough SOL for transaction fees.';
+          } else if (error.message.includes('User rejected')) {
+            errorMessage = 'Transaction was cancelled by the user.';
+          } else if (error.message.includes('Wallet not connected')) {
+            errorMessage = 'Please connect your wallet first.';
+          } else if (error.message.includes('signTransaction')) {
+            errorMessage = 'Failed to sign transaction. Please try again or reconnect your wallet.';
+          }
+        }
+        
+        setTxMessage(errorMessage);
         throw error;
       }
     },
@@ -129,7 +180,7 @@ export function TokenForm() {
   }
 
   return (
-    <Card className="w-full max-w-2xl">
+    <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>Create Your Token</CardTitle>
         <CardDescription>
@@ -238,9 +289,22 @@ export function TokenForm() {
               name="imageFile"
               render={({ field: { value, onChange, ...field } }) => (
                 <FormItem>
-                  <FormLabel>Token Logo (Optional)</FormLabel>
+                  <FormLabel>Token Logo</FormLabel>
                   <FormControl>
-                    <div className="space-y-2">
+                    <div className="space-y-4">
+                      {imagePreviewUrl && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="relative w-32 h-32 mx-auto rounded-2xl overflow-hidden border-2 border-primary/20 shadow-lg"
+                        >
+                          <img
+                            src={imagePreviewUrl}
+                            alt="Token logo preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </motion.div>
+                      )}
                       <Input 
                         type="file"
                         accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
@@ -249,16 +313,16 @@ export function TokenForm() {
                           onChange(file);
                         }}
                         {...field}
-                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:transition-colors file:duration-200 dark:file:bg-primary/20 dark:file:text-primary cursor-pointer"
+                        className="h-auto py-1.5 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:transition-colors file:duration-200 cursor-pointer"
                       />
                       {value && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-2 text-sm text-muted-foreground"
+                          className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
                         >
                           <Check className="h-4 w-4 text-green-500" />
-                          <span>Selected: {value.name} ({(value.size / 1024).toFixed(1)} KB)</span>
+                          <span>{value.name} ({(value.size / 1024).toFixed(1)} KB)</span>
                         </motion.div>
                       )}
                     </div>
@@ -288,24 +352,49 @@ export function TokenForm() {
                   control={form.control}
                   name="mintAuthority"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Retain Mint Authority
-                        </FormLabel>
-                        <FormDescription>
-                          Keep the ability to mint more tokens in the future
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
+                    <FormItem>
+                      <FormLabel>Mint Authority</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select mint authority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="self">Keep mint authority (can mint more tokens)</SelectItem>
+                          <SelectItem value="none">Revoke mint authority (fixed supply)</SelectItem>
+                          <SelectItem value="custom">Transfer to custom address</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Control who can mint additional tokens in the future
+                      </FormDescription>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {form.watch('mintAuthority') === 'custom' && (
+                  <FormField
+                    control={form.control}
+                    name="customMintAuthority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom Mint Authority Address</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enter Solana wallet address"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          The wallet address that will have mint authority
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}
