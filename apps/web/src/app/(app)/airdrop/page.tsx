@@ -1,98 +1,78 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/page-header';
+import { Card } from '@/components/ui/card';
 import { AirdropForm } from '@/components/airdrop-form';
 import { AirdropSummary } from '@/components/airdrop-summary';
-import { PageContainer } from '@/components/page-container';
+import { AirdropHistoryTable } from '@/components/airdrop-history-table';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { History } from 'lucide-react';
+
+interface AirdropRecipient {
+  wallet: string;
+  amount: string;
+}
 
 export default function AirdropPage() {
-  const { connected, publicKey } = useWallet();
   const router = useRouter();
-  const [recipients, setRecipients] = useState<Array<{ wallet: string; amount: string }>>([]);
+  const [recipients, setRecipients] = useState<AirdropRecipient[]>([]);
   const [selectedToken, setSelectedToken] = useState<string>('');
+  const [refreshHistory, setRefreshHistory] = useState(0);
 
-  useEffect(() => {
-    if (!connected) {
-      router.push('/');
-    }
-  }, [connected, router]);
-
-  if (!connected) {
-    return null;
-  }
+  const handleAirdropSuccess = () => {
+    // Clear the form
+    setRecipients([]);
+    setSelectedToken('');
+    // Trigger history refresh
+    setRefreshHistory(prev => prev + 1);
+  };
 
   return (
-    <PageContainer className="min-h-screen">
+    <div className="container mx-auto py-8 max-w-7xl">
       <PageHeader
         title="Token Airdrop"
         description="Send tokens to multiple recipients at once"
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Airdrop' },
-        ]}
-        actions={
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => router.push('/airdrop/history')}
-            >
-              View History
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard')}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-          </div>
-        }
-      />
+      >
+        <Button
+          variant="outline"
+          onClick={() => router.push('/airdrop/history')}
+          className="flex items-center gap-2"
+        >
+          <History className="h-4 w-4" />
+          View Full History
+        </Button>
+      </PageHeader>
 
-      <div className="max-w-7xl mx-auto">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Form - 2 columns */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="lg:col-span-2"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Configure Airdrop</CardTitle>
-                <CardDescription>
-                  Select a token and add recipient addresses
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AirdropForm
-                  onRecipientsChange={setRecipients}
-                  onTokenChange={setSelectedToken}
-                />
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Summary Panel - 1 column */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <AirdropSummary
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card className="p-6">
+            <AirdropForm 
               recipients={recipients}
+              setRecipients={setRecipients}
               selectedToken={selectedToken}
+              setSelectedToken={setSelectedToken}
             />
-          </motion.div>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-1">
+          <AirdropSummary 
+            recipients={recipients}
+            selectedToken={selectedToken}
+            onSuccess={handleAirdropSuccess}
+          />
         </div>
       </div>
-    </PageContainer>
+
+      {/* Airdrop History Table */}
+      <div className="mt-8">
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Recent Airdrops</h2>
+          <AirdropHistoryTable refreshTrigger={refreshHistory} />
+        </Card>
+      </div>
+    </div>
   );
 } 

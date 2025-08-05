@@ -17,9 +17,10 @@ import { AirdropProgressModal } from './airdrop-progress-modal';
 interface AirdropSummaryProps {
   recipients: Array<{ wallet: string; amount: string }>;
   selectedToken: string;
+  onSuccess?: () => void;
 }
 
-export function AirdropSummary({ recipients, selectedToken }: AirdropSummaryProps) {
+export function AirdropSummary({ recipients, selectedToken, onSuccess }: AirdropSummaryProps) {
   const { publicKey, signTransaction } = useWallet();
   const { connection } = useConnection();
   const [token, setToken] = useState<Token | null>(null);
@@ -155,6 +156,11 @@ export function AirdropSummary({ recipients, selectedToken }: AirdropSummaryProp
 
       // Refresh balance
       fetchBalance();
+      
+      // Call onSuccess callback
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error('Airdrop error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to execute airdrop');

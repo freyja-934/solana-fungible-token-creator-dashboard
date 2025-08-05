@@ -11,7 +11,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase, Token } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { FileText, Plus, Trash2, Upload } from 'lucide-react';
@@ -19,9 +19,24 @@ import Papa from 'papaparse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+interface AirdropRecipient {
+  wallet: string;
+  amount: string;
+}
+
+interface TokenData {
+  mint_address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  image_url?: string;
+}
+
 interface AirdropFormProps {
-  onRecipientsChange: (recipients: Array<{ wallet: string; amount: string }>) => void;
-  onTokenChange: (tokenMint: string) => void;
+  recipients: AirdropRecipient[];
+  setRecipients: (recipients: AirdropRecipient[]) => void;
+  selectedToken: string;
+  setSelectedToken: (token: string) => void;
 }
 
 interface RecipientRow {
@@ -30,12 +45,17 @@ interface RecipientRow {
   amount: string;
 }
 
-export function AirdropForm({ onRecipientsChange, onTokenChange }: AirdropFormProps) {
+export function AirdropForm({ 
+  recipients, 
+  setRecipients, 
+  selectedToken, 
+  setSelectedToken 
+}: AirdropFormProps) {
   const { publicKey } = useWallet();
-  const [tokens, setTokens] = useState<Token[]>([]);
-  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [tokens, setTokens] = useState<TokenData[]>([]);
+  const [selectedTokenState, setSelectedTokenState] = useState<TokenData | null>(null);
   const [method, setMethod] = useState<'manual' | 'csv'>('manual');
-  const [recipients, setRecipients] = useState<RecipientRow[]>([
+  const [recipientsState, setRecipientsState] = useState<RecipientRow[]>([
     { id: '1', wallet: '', amount: '' }
   ]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -68,20 +88,20 @@ export function AirdropForm({ onRecipientsChange, onTokenChange }: AirdropFormPr
 
   // Update parent when recipients change
   useEffect(() => {
-    const validRecipients = recipients
+    const validRecipients = recipientsState
       .filter(r => r.wallet && r.amount)
       .map(r => ({ wallet: r.wallet, amount: r.amount }));
-    onRecipientsChange(validRecipients);
-  }, [recipients, onRecipientsChange]);
+    setRecipients(validRecipients);
+  }, [recipientsState, setRecipients]);
 
   const handleTokenChange = (tokenMint: string) => {
     const token = tokens.find(t => t.mint_address === tokenMint);
-    setSelectedToken(token || null);
-    onTokenChange(tokenMint);
+    setSelectedTokenState(token || null);
+    setSelectedToken(tokenMint);
   };
 
   const addRecipient = () => {
-    setRecipients([...recipients, { 
+    setRecipientsState([...recipientsState, { 
       id: Date.now().toString(), 
       wallet: '', 
       amount: '' 
@@ -89,11 +109,11 @@ export function AirdropForm({ onRecipientsChange, onTokenChange }: AirdropFormPr
   };
 
   const removeRecipient = (id: string) => {
-    setRecipients(recipients.filter(r => r.id !== id));
+    setRecipientsState(recipientsState.filter(r => r.id !== id));
   };
 
   const updateRecipient = (id: string, field: 'wallet' | 'amount', value: string) => {
-    setRecipients(recipients.map(r => 
+    setRecipientsState(recipientsState.map(r => 
       r.id === id ? { ...r, [field]: value } : r
     ));
   };
@@ -152,7 +172,7 @@ export function AirdropForm({ onRecipientsChange, onTokenChange }: AirdropFormPr
         });
 
         if (!hasErrors && newRecipients.length > 0) {
-          setRecipients(newRecipients);
+          setRecipientsState(newRecipients);
           toast.success(`Loaded ${newRecipients.length} recipients from CSV`);
         }
       },
@@ -169,7 +189,7 @@ export function AirdropForm({ onRecipientsChange, onTokenChange }: AirdropFormPr
       <div>
         <Label htmlFor="token">Select Token</Label>
         <Select
-          value={selectedToken?.mint_address || ''}
+          value={selectedTokenState?.mint_address || ''}
           onValueChange={handleTokenChange}
           disabled={isLoadingTokens}
         >
@@ -208,7 +228,7 @@ export function AirdropForm({ onRecipientsChange, onTokenChange }: AirdropFormPr
         {/* Manual Entry */}
         <TabsContent value="manual" className="space-y-4">
           <div className="space-y-3">
-            {recipients.map((recipient, index) => (
+            {recipientsState.map((recipient, index) => (
               <div key={recipient.id} className="flex gap-3 items-start">
                 <div className="flex-1">
                   <Input
@@ -235,7 +255,7 @@ export function AirdropForm({ onRecipientsChange, onTokenChange }: AirdropFormPr
                   variant="ghost"
                   size="icon"
                   onClick={() => removeRecipient(recipient.id)}
-                  disabled={recipients.length === 1}
+                  disabled={recipientsState.length === 1}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -284,21 +304,21 @@ export function AirdropForm({ onRecipientsChange, onTokenChange }: AirdropFormPr
           </div>
 
           {/* CSV Preview */}
-          {recipients.length > 0 && method === 'csv' && (
+          {recipientsState.length > 0 && method === 'csv' && (
             <div className="space-y-2">
               <p className="text-sm font-medium">Preview (first 10 entries):</p>
               <div className="bg-secondary/10 rounded-lg p-3 space-y-1 text-sm">
-                {recipients.slice(0, 10).map((r, i) => (
+                {recipientsState.slice(0, 10).map((r, i) => (
                   <div key={r.id} className="flex justify-between">
                     <span className="text-muted-foreground">
                       {r.wallet.slice(0, 4)}...{r.wallet.slice(-4)}
                     </span>
-                    <span>{r.amount} {selectedToken?.symbol || 'tokens'}</span>
+                    <span>{r.amount} {selectedTokenState?.symbol || 'tokens'}</span>
                   </div>
                 ))}
-                {recipients.length > 10 && (
+                {recipientsState.length > 10 && (
                   <p className="text-xs text-muted-foreground text-center pt-2">
-                    ...and {recipients.length - 10} more
+                    ...and {recipientsState.length - 10} more
                   </p>
                 )}
               </div>
