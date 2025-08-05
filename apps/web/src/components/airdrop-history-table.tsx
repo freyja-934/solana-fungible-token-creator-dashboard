@@ -70,14 +70,7 @@ export function AirdropHistoryTable({ refreshTrigger }: AirdropHistoryTableProps
       try {
         let query = supabase
           .from('airdrops')
-          .select(`
-            *,
-            token:tokens!token_mint (
-              name,
-              symbol,
-              image_url
-            )
-          `, { count: 'exact' })
+          .select('*', { count: 'exact' })
           .eq('creator', publicKey.toBase58())
           .order('created_at', { ascending: false });
 
@@ -100,7 +93,20 @@ export function AirdropHistoryTable({ refreshTrigger }: AirdropHistoryTableProps
         const { data, error, count } = await query;
 
         if (!error && data) {
-          setAirdrops(data);
+          // Fetch token data for each airdrop
+          const tokenMints = [...new Set(data.map(a => a.token_mint))];
+          const { data: tokenData } = await supabase
+            .from('tokens')
+            .select('mint_address, name, symbol, image_url')
+            .in('mint_address', tokenMints);
+
+          // Map token data to airdrops
+          const airdropsWithTokens = data.map(airdrop => ({
+            ...airdrop,
+            token: tokenData?.find(t => t.mint_address === airdrop.token_mint)
+          }));
+
+          setAirdrops(airdropsWithTokens);
           if (count) {
             setTotalPages(Math.ceil(count / ITEMS_PER_PAGE));
           }
@@ -160,9 +166,9 @@ export function AirdropHistoryTable({ refreshTrigger }: AirdropHistoryTableProps
           />
         </div>
         <Select
-          value={selectedToken}
+          value={selectedToken || 'all'}
           onValueChange={(value) => {
-            setSelectedToken(value);
+            setSelectedToken(value === 'all' ? '' : value);
             setCurrentPage(1);
           }}
         >
@@ -170,7 +176,7 @@ export function AirdropHistoryTable({ refreshTrigger }: AirdropHistoryTableProps
             <SelectValue placeholder="All tokens" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All tokens</SelectItem>
+            <SelectItem value="all">All tokens</SelectItem>
             {tokens.map((token) => (
               <SelectItem key={token.mint_address} value={token.mint_address}>
                 {token.symbol} - {token.name}
