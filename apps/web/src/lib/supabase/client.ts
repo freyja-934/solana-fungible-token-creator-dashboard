@@ -17,19 +17,26 @@ export interface Token {
   creator: string;
   name: string;
   symbol: string;
-  description?: string;
-  image_url?: string;
-  metadata_uri?: string;
+  description: string | null;
+  image_url: string | null;
+  metadata_uri: string | null;
   mint_address: string;
   fee_enabled: boolean;
-  fee_percent?: number;
-  fee_wallets?: Array<{
-    address: string;
-    percent: number;
-  }>;
-  exempt_wallets?: string[];
-  initial_supply: string; // Changed from bigint to string for JSON compatibility
+  fee_percent: number | null;
+  fee_wallets: any | null;
+  exempt_wallets: any | null;
+  initial_supply: string;
   decimals: number;
+  created_at: string;
+}
+
+export interface Airdrop {
+  id: string;
+  creator: string;
+  token_mint: string;
+  recipients: Array<{ wallet: string; amount: string }>;
+  tx_ids: string[];
+  status: 'pending' | 'success' | 'partial' | 'failed';
   created_at: string;
 }
 

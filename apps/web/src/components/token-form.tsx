@@ -1,6 +1,6 @@
 'use client';
 
-import { TransactionState, TransactionStatus } from '@/components/transaction-status';
+import { TransactionStatus } from '@/components/transaction-status';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -25,6 +25,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { SuccessModal } from '@/components/ui/success-modal';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { TokenFormData, tokenFormSchema } from '@/lib/schemas';
@@ -37,18 +38,31 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Check, ChevronDown, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 export function TokenForm() {
-  const { publicKey } = useWallet();
+  const { connected, publicKey } = useWallet();
+  const router = useRouter();
   const umi = useUmi();
-  const [isOpen, setIsOpen] = useState(false);
-  const [txState, setTxState] = useState<TransactionState>('idle');
-  const [txMessage, setTxMessage] = useState<string>('');
-  const [txSignature, setTxSignature] = useState<string>('');
-  const [createdMint, setCreatedMint] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [txState, setTxState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [txMessage, setTxMessage] = useState('');
+  const [txSignature, setTxSignature] = useState<string | null>(null);
+  const [createdMint, setCreatedMint] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [successTokenData, setSuccessTokenData] = useState<{
+    name: string;
+    symbol: string;
+    mintAddress: string;
+    imageUrl?: string;
+    description?: string;
+    transactionSignature?: string;
+  } | null>(null);
 
   const form = useForm<TokenFormData>({
     resolver: zodResolver(tokenFormSchema),
@@ -71,11 +85,7 @@ export function TokenForm() {
     if (imageFile) {
       const url = URL.createObjectURL(imageFile);
       setImagePreviewUrl(url);
-      
-      // Cleanup function to revoke the object URL
-      return () => {
-        URL.revokeObjectURL(url);
-      };
+      return () => URL.revokeObjectURL(url);
     } else {
       setImagePreviewUrl(null);
     }
@@ -116,7 +126,7 @@ export function TokenForm() {
         
         setTxMessage('Creating token on Solana mainnet...');
         const result = await createSplToken(umi, data, metadataUri);
-        setCreatedMint(result.mint);
+        setCreatedMint(result.mint.toString());
         setTxSignature(result.transactionSignature);
         
         // Save to Supabase
@@ -146,6 +156,18 @@ export function TokenForm() {
         
         setTxState('success');
         setTxMessage(`Token created successfully! Mint address: ${result.mint}`);
+        
+        // Prepare success modal data
+        setSuccessTokenData({
+          name: data.name,
+          symbol: data.symbol,
+          mintAddress: createdMint || result.mint.toString(),
+          imageUrl: imageUri,
+          description: data.description,
+          transactionSignature: result.transactionSignature,
+        });
+        setShowSuccessModal(true);
+        
         form.reset();
         return result;
       } catch (error) {
@@ -335,7 +357,7 @@ export function TokenForm() {
               )}
             />
 
-            <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
               <CollapsibleTrigger asChild>
                 <Button
                   type="button"
@@ -344,7 +366,7 @@ export function TokenForm() {
                   className="w-full justify-between"
                 >
                   Advanced Settings
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-4 pt-4">
@@ -425,8 +447,8 @@ export function TokenForm() {
               <TransactionStatus
                 state={txState}
                 message={txMessage}
-                transactionSignature={txSignature}
-                mintAddress={createdMint}
+                transactionSignature={txSignature || ''}
+                mintAddress={createdMint || ''}
               />
             )}
 
@@ -472,6 +494,25 @@ export function TokenForm() {
             )}
           </form>
         </Form>
+        
+        {successTokenData && (
+          <SuccessModal
+            isOpen={showSuccessModal}
+            onClose={() => {
+              setShowSuccessModal(false);
+              setSuccessTokenData(null);
+            }}
+            tokenData={successTokenData}
+            onViewToken={() => {
+              router.push(`/token/${successTokenData.mintAddress}`);
+              setShowSuccessModal(false);
+            }}
+            onGoToDashboard={() => {
+              router.push('/dashboard');
+              setShowSuccessModal(false);
+            }}
+          />
+        )}
       </CardContent>
     </Card>
   );

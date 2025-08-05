@@ -45,8 +45,8 @@ function TokensSidebarContent() {
     {
       label: 'Create Airdrop',
       icon: Users,
-      href: '#',
-      isActive: false,
+      href: '/airdrop',
+      isActive: pathname === '/airdrop',
     },
   ];
 

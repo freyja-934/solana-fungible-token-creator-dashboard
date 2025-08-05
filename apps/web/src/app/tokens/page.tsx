@@ -1,6 +1,7 @@
 'use client';
 
 import { ActionButton } from '@/components/ui/action-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -19,6 +20,7 @@ import {
     Copy,
     ExternalLink,
     Filter,
+    LayoutDashboard,
     Loader2,
     Plus,
     Search
@@ -125,14 +127,26 @@ function TokensPageContent() {
           <h1 className="text-3xl font-bold">
             {filter === 'mine' ? 'My Tokens' : 'All Tokens'}
           </h1>
-          <ActionButton
-            size="lg"
-            onClick={() => router.push('/create')}
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Create Token
-          </ActionButton>
+          <div className="flex items-center gap-3">
+            {publicKey && (
+              <Button
+                variant="outline"
+                onClick={() => router.push('/dashboard')}
+                className="gap-2"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Button>
+            )}
+            <ActionButton
+              size="lg"
+              onClick={() => router.push('/create')}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Create Token
+            </ActionButton>
+          </div>
         </div>
 
         {/* Toolbar */}

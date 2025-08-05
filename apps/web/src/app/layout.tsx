@@ -1,5 +1,6 @@
 import { Providers } from "@/components/providers";
 import type { Metadata } from "next";
+import { Toaster } from 'sonner';
 import "./globals.css";
 
 // Import Solana Wallet Adapter styles
@@ -26,10 +27,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="dark">
-      <body
-        className="antialiased font-inter"
-      >
-        <Providers>{children}</Providers>
+      <body className="antialiased font-inter">
+        <Providers>
+          {children}
+          <Toaster 
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: 'hsl(var(--background))',
+                color: 'hsl(var(--foreground))',
+                border: '1px solid hsl(var(--border))',
+              },
+            }}
+          />
+        </Providers>
       </body>
     </html>
   );
