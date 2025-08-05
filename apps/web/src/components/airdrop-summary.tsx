@@ -25,7 +25,6 @@ export function AirdropSummary({ recipients, selectedToken, onSuccess }: Airdrop
   const { connection } = useConnection();
   const [token, setToken] = useState<Token | null>(null);
   const [balance, setBalance] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [airdropProgress, setAirdropProgress] = useState<AirdropProgressType | null>(null);
@@ -101,9 +100,12 @@ export function AirdropSummary({ recipients, selectedToken, onSuccess }: Airdrop
     }
   };
 
+  // Fetch balance when token changes
   useEffect(() => {
-    fetchBalance();
-  }, [publicKey, selectedToken, token, connection]);
+    if (token && publicKey) {
+      fetchBalance();
+    }
+  }, [token, publicKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasEnoughBalance = balance >= totalAmount;
   const canProceed = selectedToken && 

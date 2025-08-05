@@ -43,11 +43,9 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 export function TokenForm() {
-  const { connected, publicKey } = useWallet();
+  const { publicKey } = useWallet();
   const router = useRouter();
   const umi = useUmi();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [txState, setTxState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [txMessage, setTxMessage] = useState('');
@@ -330,10 +328,7 @@ export function TokenForm() {
                       <Input 
                         type="file"
                         accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          onChange(file);
-                        }}
+                        onChange={onChange}
                         {...field}
                         className="h-auto py-1.5 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:transition-colors file:duration-200 cursor-pointer"
                       />

@@ -57,6 +57,16 @@ export function AirdropHistoryTable({ refreshTrigger }: AirdropHistoryTableProps
     });
   };
 
+  // Expand all rows
+  const expandAll = () => {
+    setExpandedRows(new Set(airdrops.map(a => a.id)));
+  };
+
+  // Collapse all rows
+  const collapseAll = () => {
+    setExpandedRows(new Set());
+  };
+
   // Copy wallet address
   const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text);
@@ -207,6 +217,35 @@ export function AirdropHistoryTable({ refreshTrigger }: AirdropHistoryTableProps
         </Select>
       </div>
 
+      {/* Expand/Collapse buttons */}
+      {!loading && airdrops.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={expandAll}
+            className="text-xs"
+            disabled={expandedRows.size === airdrops.length}
+          >
+            <ChevronDown className="h-3 w-3 mr-1" />
+            Expand All
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={collapseAll}
+            className="text-xs"
+            disabled={expandedRows.size === 0}
+          >
+            <ChevronUp className="h-3 w-3 mr-1" />
+            Collapse All
+          </Button>
+          <span className="text-xs text-muted-foreground ml-2">
+            {expandedRows.size} of {airdrops.length} expanded
+          </span>
+        </div>
+      )}
+
       {/* Table */}
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full">
@@ -304,37 +343,40 @@ export function AirdropHistoryTable({ refreshTrigger }: AirdropHistoryTableProps
                       <td colSpan={7} className="bg-secondary/10 px-4 py-4">
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium mb-3">Recipient Details</h4>
-                          <div className="grid gap-2">
+                          <div className="grid gap-2 max-w-5xl mx-auto">
                             {airdrop.recipients.map((recipient, index) => (
                               <div
                                 key={index}
-                                className="flex items-center justify-between p-2 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
+                                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
                               >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground w-8">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-xs text-muted-foreground w-8 flex-shrink-0">
                                     #{index + 1}
                                   </span>
-                                  <code className="text-sm font-mono">
-                                    {recipient.wallet.slice(0, 4)}...{recipient.wallet.slice(-4)}
+                                  <code className="text-sm font-mono break-all sm:break-normal">
+                                    <span className="hidden sm:inline">{recipient.wallet}</span>
+                                    <span className="sm:hidden">
+                                      {recipient.wallet.slice(0, 4)}...{recipient.wallet.slice(-4)}
+                                    </span>
                                   </code>
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => copyToClipboard(recipient.wallet)}
-                                    className="p-0 h-6 w-6"
+                                    className="p-0 h-6 w-6 flex-shrink-0"
                                   >
                                     <Copy className="h-3 w-3" />
                                   </Button>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium">
+                                <div className="flex items-center gap-2 sm:gap-3 ml-10 sm:ml-0">
+                                  <span className="text-sm font-medium whitespace-nowrap">
                                     {parseFloat(recipient.amount).toLocaleString()} {airdrop.token?.symbol}
                                   </span>
                                   <a
                                     href={`https://explorer.solana.com/address/${recipient.wallet}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-primary hover:text-primary/80 transition-colors"
+                                    className="text-primary hover:text-primary/80 transition-colors flex-shrink-0"
                                   >
                                     <ExternalLink className="h-3 w-3" />
                                   </a>

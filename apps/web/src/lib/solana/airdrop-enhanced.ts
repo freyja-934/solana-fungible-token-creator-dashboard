@@ -52,7 +52,7 @@ export async function prepareAirdropTransactions(
   // Verify payer has token account
   try {
     await getAccount(connection, payerAta);
-  } catch (error) {
+  } catch {
     throw new Error('Payer does not have a token account for this token');
   }
 

@@ -46,9 +46,7 @@ interface RecipientRow {
 }
 
 export function AirdropForm({ 
-  recipients, 
   setRecipients, 
-  selectedToken, 
   setSelectedToken 
 }: AirdropFormProps) {
   const { publicKey } = useWallet();
@@ -137,41 +135,41 @@ export function AirdropForm({
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const data = results.data as any[];
+        const data = results.data as Array<{wallet?: string; address?: string; amount?: string}>;
         const newRecipients: RecipientRow[] = [];
-        let hasErrors = false;
+        const errors: string[] = [];
 
-        data.forEach((row, index) => {
+        data.forEach((row, i) => {
           const wallet = row.wallet || row.address || '';
           const amount = row.amount || '';
 
           if (!wallet || !amount) {
-            toast.error(`Row ${index + 1}: Missing wallet or amount`);
-            hasErrors = true;
+            toast.error(`Row ${i + 1}: Missing wallet or amount`);
+            errors.push(`Row ${i + 1}: Missing wallet or amount`);
             return;
           }
 
           if (!validateWallet(wallet)) {
-            toast.error(`Row ${index + 1}: Invalid wallet address`);
-            hasErrors = true;
+            toast.error(`Row ${i + 1}: Invalid wallet address`);
+            errors.push(`Row ${i + 1}: Invalid wallet address`);
             return;
           }
 
           const numAmount = parseFloat(amount);
           if (isNaN(numAmount) || numAmount <= 0) {
-            toast.error(`Row ${index + 1}: Invalid amount`);
-            hasErrors = true;
+            toast.error(`Row ${i + 1}: Invalid amount`);
+            errors.push(`Row ${i + 1}: Invalid amount`);
             return;
           }
 
           newRecipients.push({
-            id: Date.now().toString() + index,
+            id: Date.now().toString() + i,
             wallet,
             amount: amount.toString()
           });
         });
 
-        if (!hasErrors && newRecipients.length > 0) {
+        if (errors.length === 0 && newRecipients.length > 0) {
           setRecipientsState(newRecipients);
           toast.success(`Loaded ${newRecipients.length} recipients from CSV`);
         }
@@ -228,9 +226,10 @@ export function AirdropForm({
         {/* Manual Entry */}
         <TabsContent value="manual" className="space-y-4">
           <div className="space-y-3">
-            {recipientsState.map((recipient, index) => (
+            {recipientsState.map((recipient) => (
               <div key={recipient.id} className="flex gap-3 items-start">
                 <div className="flex-1">
+                  <Label className="sr-only">Wallet Address</Label>
                   <Input
                     placeholder="Wallet address"
                     value={recipient.wallet}
@@ -308,7 +307,7 @@ export function AirdropForm({
             <div className="space-y-2">
               <p className="text-sm font-medium">Preview (first 10 entries):</p>
               <div className="bg-secondary/10 rounded-lg p-3 space-y-1 text-sm">
-                {recipientsState.slice(0, 10).map((r, i) => (
+                {recipientsState.slice(0, 10).map((r) => (
                   <div key={r.id} className="flex justify-between">
                     <span className="text-muted-foreground">
                       {r.wallet.slice(0, 4)}...{r.wallet.slice(-4)}

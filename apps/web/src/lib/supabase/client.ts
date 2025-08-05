@@ -23,11 +23,13 @@ export interface Token {
   mint_address: string;
   fee_enabled: boolean;
   fee_percent: number | null;
-  fee_wallets: any | null;
-  exempt_wallets: any | null;
+  fee_wallets: string[] | null;
+  exempt_wallets: string[] | null;
   initial_supply: string;
   decimals: number;
   created_at: string;
+  creator_address: string;
+  updated_at: string | null;
 }
 
 export interface Airdrop {

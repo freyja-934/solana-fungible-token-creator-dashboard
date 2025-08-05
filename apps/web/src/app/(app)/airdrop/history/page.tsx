@@ -176,7 +176,7 @@ export default function AirdropHistoryPage() {
                         <div className="pt-3 border-t border-white/10">
                           <p className="text-xs text-muted-foreground mb-2">Transaction Signatures:</p>
                           <div className="space-y-1">
-                            {airdrop.tx_ids.slice(0, 3).map((sig, i) => (
+                            {airdrop.tx_ids.slice(0, 3).map((sig) => (
                               <a
                                 key={sig}
                                 href={`https://explorer.solana.com/tx/${sig}`}

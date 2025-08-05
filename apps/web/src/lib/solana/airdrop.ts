@@ -54,7 +54,7 @@ export async function executeAirdrop(
   // Check if payer has token account
   try {
     await getAccount(connection, payerAta);
-  } catch (error) {
+  } catch {
     throw new Error('Payer does not have a token account for this token');
   }
 

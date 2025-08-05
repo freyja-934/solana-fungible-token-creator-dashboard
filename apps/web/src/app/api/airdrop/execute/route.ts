@@ -25,6 +25,13 @@ interface ExecutionResult {
 
 export async function POST(request: NextRequest) {
   try {
+    // Create edge-compatible connection
+    const connection = new Connection(HELIUS_RPC_URL, {
+      commitment: 'confirmed',
+      confirmTransactionInitialTimeout: 60000,
+    });
+
+    // Parse request body
     const body: ExecuteAirdropRequest = await request.json();
     const { airdropId, transactions, creator, tokenMint } = body;
 
@@ -35,7 +42,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const connection = new Connection(HELIUS_RPC_URL, 'confirmed');
     const transactionSignatures: string[] = [];
     const failedBatches: number[] = [];
 
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Process each transaction
     for (let i = 0; i < transactions.length; i++) {
-      const { serialized, recipients } = transactions[i];
+      const { serialized } = transactions[i];
       
       try {
         // Deserialize the transaction
