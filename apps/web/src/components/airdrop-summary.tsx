@@ -143,15 +143,23 @@ export function AirdropSummary({ recipients, selectedToken, onSuccess }: Airdrop
 
       // Save to Supabase
       try {
-        await supabase.from('airdrops').insert({
+        const { error: insertError } = await supabase.from('airdrops').insert({
           creator: publicKey.toBase58(),
           token_mint: token.mint_address,
           recipients: recipients,
           tx_ids: result.transactionSignatures,
           status: result.success ? 'success' : 'partial'
         });
+        
+        if (insertError) {
+          console.error('Failed to save airdrop to database:', insertError);
+          toast.error('Failed to save airdrop history');
+        } else {
+          console.log('Airdrop saved successfully');
+        }
       } catch (error) {
         console.error('Failed to save airdrop to database:', error);
+        toast.error('Failed to save airdrop history');
       }
 
       // Refresh balance
