@@ -1,5 +1,6 @@
 'use client';
 
+import { FeePreview } from '@/components/fee-preview';
 import { TransactionStatus } from '@/components/transaction-status';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +30,7 @@ import { SuccessModal } from '@/components/ui/success-modal';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { TokenFormData, tokenFormSchema } from '@/lib/schemas';
-import { createSplToken } from '@/lib/solana/token';
+import { createCustomTokenWithUmi, TOKEN_FACTORY_PROGRAM_ID } from '@/lib/solana/custom-token';
 import { useUmi } from '@/lib/solana/umi-provider';
 import { uploadToIPFS } from '@/lib/solana/upload';
 import { supabase } from '@/lib/supabase/client';
@@ -73,6 +74,13 @@ export function TokenForm() {
       freezeAuthority: false,
       description: '',
       imageFile: undefined,
+      // Fee configuration defaults
+      treasuryWallet: '',  // Defaults to connected wallet if empty
+      stakingWallet: '',
+      marketingWallet: '',
+      treasuryBps: 200,  // 2% default to treasury
+      stakingBps: 0,
+      marketingBps: 0,
     },
   });
 
@@ -80,7 +88,7 @@ export function TokenForm() {
 
   // Handle image preview URL
   useEffect(() => {
-    if (imageFile) {
+    if (imageFile && imageFile instanceof File) {
       const url = URL.createObjectURL(imageFile);
       setImagePreviewUrl(url);
       return () => URL.revokeObjectURL(url);
@@ -122,14 +130,31 @@ export function TokenForm() {
           imageUri = uploadedImageUri;
         }
         
-        setTxMessage('Creating token on Solana mainnet...');
-        const result = await createSplToken(umi, data, metadataUri);
+        setTxMessage('Creating token with custom program on Solana...');
+        const result = await createCustomTokenWithUmi(umi, data, metadataUri);
         setCreatedMint(result.mint.toString());
         setTxSignature(result.transactionSignature);
         
         // Save to Supabase
         try {
           setTxMessage('Saving token information...');
+          
+          // Calculate total fee percentage
+          const totalFeeBps = (data.treasuryBps || 0) + (data.stakingBps || 0) + (data.marketingBps || 0);
+          const totalFeePercent = totalFeeBps / 100;
+          
+          // Build fee wallets object
+          const feeWallets = {
+            treasury: data.treasuryWallet || publicKey?.toBase58() || '',
+            staking: data.stakingWallet || publicKey?.toBase58() || '',
+            marketing: data.marketingWallet || publicKey?.toBase58() || '',
+            treasuryBps: data.treasuryBps || 0,
+            stakingBps: data.stakingBps || 0,
+            marketingBps: data.marketingBps || 0,
+            isCustomToken: true,
+            programId: TOKEN_FACTORY_PROGRAM_ID.toBase58(),
+          };
+          
           const { error } = await supabase.from('tokens').insert({
             creator: publicKey?.toBase58() || '',
             name: data.name,
@@ -137,8 +162,10 @@ export function TokenForm() {
             description: data.description,
             image_url: imageUri,
             metadata_uri: metadataUri,
-            mint_address: result.mint,
-            fee_enabled: false, // TODO: Add fee configuration
+            mint_address: result.mint.toString(),
+            fee_enabled: totalFeeBps > 0,
+            fee_percent: totalFeePercent,
+            fee_wallets: feeWallets,
             initial_supply: (BigInt(parseFloat(data.initialSupply) * Math.pow(10, data.decimals))).toString(),
             decimals: data.decimals,
           });
@@ -328,7 +355,10 @@ export function TokenForm() {
                       <Input 
                         type="file"
                         accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                        onChange={onChange}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          onChange(file);
+                        }}
                         {...field}
                         className="h-auto py-1.5 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:transition-colors file:duration-200 cursor-pointer"
                       />
@@ -435,8 +465,196 @@ export function TokenForm() {
                     </FormItem>
                   )}
                 />
+
+                {/* Fee Configuration */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Fee Distribution</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Configure how transfer fees are distributed. Platform fees (0.1 SOL creation + 0.1% transfers) are applied automatically.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Note:</strong> Empty wallet addresses default to your connected wallet. You can split fees across multiple wallets or keep 100% in treasury.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4">
+                    <FormField
+                      control={form.control}
+                      name="treasuryWallet"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Treasury Wallet</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder={publicKey ? `Defaults to your wallet (${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)})` : "Solana wallet address"} 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="treasuryBps"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Treasury Fee %</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                max="10"
+                                step="0.01"
+                                placeholder="0"
+                                {...field}
+                                onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || '0') * 100))}
+                                value={(field.value / 100).toFixed(2)}
+                              />
+                              <span className="text-sm text-muted-foreground">%</span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Percentage of each transfer sent to treasury
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="stakingWallet"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Staking Wallet <span className="text-xs text-muted-foreground">(Optional)</span></FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder={publicKey ? `Leave empty to use your wallet` : "Solana wallet address (optional)"} 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="stakingBps"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Staking Fee %</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                max="10"
+                                step="0.01"
+                                placeholder="0"
+                                {...field}
+                                onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || '0') * 100))}
+                                value={(field.value / 100).toFixed(2)}
+                              />
+                              <span className="text-sm text-muted-foreground">%</span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Percentage of each transfer sent to staking rewards
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="marketingWallet"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Marketing Wallet <span className="text-xs text-muted-foreground">(Optional)</span></FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder={publicKey ? `Leave empty to use your wallet` : "Solana wallet address (optional)"} 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="marketingBps"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Marketing Fee %</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                min="0" 
+                                max="10"
+                                step="0.01"
+                                placeholder="0"
+                                {...field}
+                                onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || '0') * 100))}
+                                value={(field.value / 100).toFixed(2)}
+                              />
+                              <span className="text-sm text-muted-foreground">%</span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Percentage of each transfer sent to marketing
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Total Fee Display */}
+                    <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Total Transfer Fees:</span>
+                        <span className="text-sm font-semibold">
+                          {((form.watch('treasuryBps', 0) + form.watch('stakingBps', 0) + form.watch('marketingBps', 0)) / 100).toFixed(2)}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Plus 0.1% platform fee on all transfers
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CollapsibleContent>
             </Collapsible>
+
+            {/* Fee Preview */}
+            {(form.watch('treasuryBps', 0) > 0 || 
+              form.watch('stakingBps', 0) > 0 || 
+              form.watch('marketingBps', 0) > 0) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <FeePreview
+                  treasuryBps={form.watch('treasuryBps', 0)}
+                  stakingBps={form.watch('stakingBps', 0)}
+                  marketingBps={form.watch('marketingBps', 0)}
+                  hasCustomWallets={
+                    !!form.watch('treasuryWallet') || 
+                    !!form.watch('stakingWallet') || 
+                    !!form.watch('marketingWallet')
+                  }
+                />
+              </motion.div>
+            )}
 
             {txState !== 'idle' && (
               <TransactionStatus

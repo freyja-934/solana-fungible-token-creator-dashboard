@@ -14,8 +14,10 @@ interface Particle {
 
 export function Background() {
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const particleCount = 50;
     const newParticles: Particle[] = [];
 
@@ -48,31 +50,33 @@ export function Background() {
         }}
       />
       
-      {/* Animated particles */}
-      <div className="absolute inset-0">
-        {particles.map((particle) => (
-          <motion.div
-            key={particle.id}
-            className="absolute rounded-full bg-white/20"
-            style={{
-              width: particle.size,
-              height: particle.size,
-              left: `${particle.x}%`,
-              top: `${particle.y}%`,
-            }}
-            animate={{
-              y: [0, -30, 0],
-              opacity: [0, 1, 0],
-            }}
-            transition={{
-              duration: particle.duration,
-              repeat: Infinity,
-              delay: particle.delay,
-              ease: 'easeInOut',
-            }}
-          />
-        ))}
-      </div>
+      {/* Animated particles - only render after mount to avoid hydration mismatch */}
+      {mounted && (
+        <div className="absolute inset-0">
+          {particles.map((particle) => (
+            <motion.div
+              key={particle.id}
+              className="absolute rounded-full bg-white/20"
+              style={{
+                width: particle.size,
+                height: particle.size,
+                left: `${particle.x}%`,
+                top: `${particle.y}%`,
+              }}
+              animate={{
+                y: [0, -30, 0],
+                opacity: [0, 1, 0],
+              }}
+              transition={{
+                duration: particle.duration,
+                repeat: Infinity,
+                delay: particle.delay,
+                ease: 'easeInOut',
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Radial gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background" />

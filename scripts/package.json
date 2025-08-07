@@ -7,13 +7,22 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.9",
-    "tsx": "^4.20.0",
-    "typescript": "^5.8.3"
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
     "@irys/sdk": "^0.1.0",
     "@metaplex-foundation/umi": "^1.2.0",
     "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.98.4",
     "dotenv": "^17.2.1"
-  }
+  },
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }

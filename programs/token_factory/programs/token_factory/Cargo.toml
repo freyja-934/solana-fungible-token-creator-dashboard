@@ -16,4 +16,9 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.29.0"
+anchor-lang = { version = "0.30.1", features = ["init-if-needed"] }
+anchor-spl = "0.30.1"
+spl-token = { version = "4.0", features = ["no-entrypoint"] }
+spl-token-2022 = { version = "0.9", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "2.2", features = ["no-entrypoint"] }
+mpl-token-metadata = { version = "4.1" }

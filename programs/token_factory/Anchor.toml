@@ -5,7 +5,13 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-token_factory = "H7hosUTUzvSebYWvj4oFw8DrpjNZVAXBYNzAwZbaFcWg"
+token_factory = "xCtaFUv4D3NRP5NGvaf3uSSKgD1cbbi9mUaJgNJNYc1"
+
+[programs.devnet]
+token_factory = "7RSKqnZYg6wsPyHAjKK1i7RCYrYoyoSDw2AaPxMnAnWT"
+
+[programs.mainnet]
+token_factory = "xCtaFUv4D3NRP5NGvaf3uSSKgD1cbbi9mUaJgNJNYc1"
 
 [registry]
 url = "https://api.apr.dev"
